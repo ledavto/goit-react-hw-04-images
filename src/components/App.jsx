@@ -3,93 +3,62 @@ import { ImageGallery } from './ImageGallery';
 import { Loader } from './Loader';
 import { Modal } from './Modal';
 import { Searchbar } from './Searchbar';
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api/api';
 
-export class App extends Component {
-  state = {
-    images: [],
-    searchStr: '',
-    isLoader: false,
-    error: null,
-    page: 1,
-    modal: { isShow: false, src: '' },
-  };
+export const App = () => {
+  const [images, setImages] = useState([]);
+  const [searchStr, setSearchStr] = useState('');
+  const [isLoader, setIsLoader] = useState(false);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [isShowModal, setIsShowModal] = useState(false);
+  const [srcModal, setSrcModal] = useState('');
+  const [isLoadMore, setIsLoadMore] = useState(false);
 
-  componentDidUpdate(prevProps, prevState) {
-    // console.log(this.state);
+  useEffect(() => {}, [images]);
 
-    if (this.state.images !== prevState.images) {
-      // console.log(this.state.images);
-    }
-
-    //Если нажата кнопка LoadMore или Search
-    if (
-      this.state.page !== prevState.page ||
-      this.state.searchStr !== prevState.searchStr
-    ) {
-      // console.log(this.state.page);
-      api.getSearch(this.state.searchStr, this.state.page).then(data => {
-        // console.log(this.state.page < Math.ceil(data.totalHits / 12));
-        // console.log(this.state.page);
-        this.setState(prev => ({
-          images: [...prev.images, ...data.hits],
-          isLoader: false,
-          isLoadMore: prev.page < Math.ceil(data.totalHits / 12),
-        }));
+  useEffect(() => {
+    if (searchStr)
+      api.getSearch(searchStr, page).then(data => {
+        setImages(prev => [...prev, ...data.hits]);
+        setIsLoader(false);
+        setIsLoadMore(page < Math.ceil(data.totalHits / 12));
       });
-    }
-  }
+  }, [page, searchStr]);
 
-  handleLoadMore = () => {
-    this.setState(prevState => {
-      return {
-        page: prevState.page + 1,
-      };
-    });
+  const handleLoadMore = () => {
+    setPage(prev => prev + 1);
   };
 
-  handleShowModal = e => {
-    // console.log(e);
-    this.setState({ modal: { isShow: true, src: e } });
+  const handleShowModal = e => {
+    setIsShowModal(true);
+    setSrcModal(e);
   };
 
-  handleSearch = searchInput => {
-    // console.log(searchInput);
-    this.setState({
-      isLoader: true,
-      searchStr: searchInput,
-      page: 1,
-      images: [],
-    });
+  const handleSearch = searchInput => {
+    setIsLoader(true);
+    setSearchStr(searchInput);
+    setPage(1);
+    setImages([]);
   };
 
-  handleCloseModal = e => {
-    this.setState({ modal: { isShow: false } });
+  const handleCloseModal = e => {
+    setIsShowModal(false);
   };
 
-  render() {
-    return (
-      <>
-        {/* Компонент приймає один проп onSubmit – функцію для передачі 
+  return (
+    <>
+      {/* Компонент приймає один проп onSubmit – функцію для передачі 
         значення інпута під час сабміту форми. */}
-        <Searchbar onSubmit={this.handleSearch} />
-        {this.state.images.length > 0 && (
-          <ImageGallery
-            images={this.state.images}
-            showModal={this.handleShowModal}
-          />
-        )}
-        {this.state.isLoader && <Loader />}
-        {this.state.isLoadMore && <Button onLoadMore={this.handleLoadMore} />}
+      <Searchbar onSubmit={handleSearch} />
+      {images.length > 0 && (
+        <ImageGallery images={images} showModal={handleShowModal} />
+      )}
+      {isLoader && <Loader />}
+      {isLoadMore && <Button onLoadMore={handleLoadMore} />}
 
-        {this.state.modal.isShow && (
-          <Modal
-            imgURL={this.state.modal.src}
-            keyClose={this.handleCloseModal}
-          />
-        )}
-      </>
-    );
-  }
-}
+      {isShowModal && <Modal imgURL={srcModal} keyClose={handleCloseModal} />}
+    </>
+  );
+};
